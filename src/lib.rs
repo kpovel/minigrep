@@ -1,4 +1,7 @@
-use std::{env, error::Error, fs};
+mod parse_flags;
+use std::{error::Error, fs};
+
+use parse_flags::{parse_flags, Flag};
 
 pub struct Config {
     pub query: String,
@@ -7,16 +10,34 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn build(args: &[String]) -> Result<Config, &'static str> {
+    pub fn build(args: &[String]) -> Result<Config, String> {
         if args.len() < 3 {
-            return Err("not enough arguments");
+            return Err("not enough arguments".to_string());
         }
 
-        return Ok(Config {
-            query: args[1].to_string(),
-            file_path: args[2].to_string(),
-            ignore_case: env::var("IGNORE_CASE").is_ok(),
-        });
+        let case_flag = parse_flags(args);
+        let ignore_case = match case_flag {
+            Ok(v) => match v {
+                Flag::CaseSensitive => false,
+                Flag::CaseInsensitive => true,
+            },
+            Err(e) => return Err(e),
+        };
+
+        // todo: redo this
+        if args.len() == 3 {
+            return Ok(Config {
+                query: args[1].to_string(),
+                file_path: args[2].to_string(),
+                ignore_case,
+            });
+        } else {
+            return Ok(Config {
+                query: args[2].to_string(),
+                file_path: args[3].to_string(),
+                ignore_case,
+            });
+        }
     }
 }
 
